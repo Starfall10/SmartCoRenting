@@ -1,25 +1,141 @@
 import React, { useState } from "react";
-import { FaCog, FaEdit, FaTimes } from "react-icons/fa";
+import { FaCog, FaEdit, FaTimes, FaCheck, FaPlus } from "react-icons/fa";
 import { MdDarkMode, MdLightMode } from "react-icons/md";
-import { ViewType } from "@/types";
+import { ViewType, UserData } from "@/types";
+import {
+  updateLifestyleTags,
+  updateConstraintTags,
+  updateBio,
+} from "@/lib/firebase/user";
+import { signOutUser } from "@/lib/firebase/auth";
 
 interface ProfilePageProps {
   setActiveView: (view: ViewType) => void;
   isDarkMode: boolean;
   setIsDarkMode: (isDark: boolean) => void;
+  currentUser: UserData | null;
+  setCurrentUser: (user: UserData | null) => void;
 }
+
+const LIFESTYLE_OPTIONS = [
+  "Night Owl",
+  "Early Bird",
+  "Very Tidy",
+  "Relaxed Clean",
+  "Quiet Home",
+  "Social",
+  "Works from Home",
+  "Pet Friendly",
+  "Fitness Enthusiast",
+  "Homebody",
+  "Traveler",
+  "Foodie",
+];
+
+const CONSTRAINT_OPTIONS = [
+  "Zone 1",
+  "Zone 2",
+  "Zone 3",
+  "Zone 4",
+  "Short-Term",
+  "Long-Term",
+  "Male Only",
+  "Female Only",
+  "No Smoking",
+  "No Pets",
+  "Vegetarian Kitchen",
+  "Flexible Schedule",
+];
 
 const ProfilePage: React.FC<ProfilePageProps> = ({
   setActiveView,
   isDarkMode,
   setIsDarkMode,
+  currentUser,
+  setCurrentUser,
 }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const [editingLifestyle, setEditingLifestyle] = useState(false);
+  const [editingConstraints, setEditingConstraints] = useState(false);
+  const [editingBio, setEditingBio] = useState(false);
+  const [bio, setBio] = useState(currentUser?.bio || "");
+  const [lifestyleTags, setLifestyleTags] = useState<string[]>(
+    currentUser?.lifestyleTags || [],
+  );
+  const [constraintTags, setConstraintTags] = useState<string[]>(
+    currentUser?.constraintTags || [],
+  );
+  const [saving, setSaving] = useState(false);
 
-  const handleLogout = () => {
-    setShowSettings(false);
-    setActiveView("login");
+  const handleLogout = async () => {
+    try {
+      await signOutUser();
+      await fetch("/api/auth/session", { method: "DELETE" });
+      setCurrentUser(null);
+      setShowSettings(false);
+      setActiveView("login");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
+
+  const toggleTag = (
+    tag: string,
+    tags: string[],
+    setTags: (tags: string[]) => void,
+  ) => {
+    if (tags.includes(tag)) {
+      setTags(tags.filter((t) => t !== tag));
+    } else {
+      setTags([...tags, tag]);
+    }
+  };
+
+  const handleSaveLifestyle = async () => {
+    if (!currentUser) return;
+    setSaving(true);
+    try {
+      await updateLifestyleTags(currentUser.uid, lifestyleTags);
+      setCurrentUser({ ...currentUser, lifestyleTags });
+      setEditingLifestyle(false);
+    } catch (error) {
+      console.error("Error saving lifestyle tags:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveConstraints = async () => {
+    if (!currentUser) return;
+    setSaving(true);
+    try {
+      await updateConstraintTags(currentUser.uid, constraintTags);
+      setCurrentUser({ ...currentUser, constraintTags });
+      setEditingConstraints(false);
+    } catch (error) {
+      console.error("Error saving constraint tags:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveBio = async () => {
+    if (!currentUser) return;
+    setSaving(true);
+    try {
+      await updateBio(currentUser.uid, bio);
+      setCurrentUser({ ...currentUser, bio });
+      setEditingBio(false);
+    } catch (error) {
+      console.error("Error saving bio:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const displayName =
+    currentUser?.fullName || currentUser?.displayName || "User";
+  const displayAge = currentUser?.age || "N/A";
 
   return (
     <div
@@ -51,9 +167,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
           <span className="text-3xl">👤</span>
         </div>
         <div>
-          <h2 className="text-2xl font-bold">Winston Harold</h2>
+          <h2 className="text-2xl font-bold">{displayName}</h2>
           <p className={isDarkMode ? "text-gray-400" : "text-gray-600"}>
-            Age: 24
+            Age: {displayAge}
           </p>
         </div>
       </div>
@@ -62,28 +178,68 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold">Life Style</h3>
-          <button
-            className={`hover:opacity-70 ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-black"}`}
-          >
-            <FaEdit size={16} />
-          </button>
+          {editingLifestyle ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setLifestyleTags(currentUser?.lifestyleTags || []);
+                  setEditingLifestyle(false);
+                }}
+                className={`hover:opacity-70 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
+              >
+                <FaTimes size={16} />
+              </button>
+              <button
+                onClick={handleSaveLifestyle}
+                disabled={saving}
+                className="text-green-500 hover:opacity-70"
+              >
+                <FaCheck size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setEditingLifestyle(true)}
+              className={`hover:opacity-70 ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-black"}`}
+            >
+              <FaEdit size={16} />
+            </button>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <span
-            className={`px-4 py-2 rounded-full text-sm ${isDarkMode ? "bg-zinc-800" : "bg-gray-200"}`}
-          >
-            Night Owl
-          </span>
-          <span
-            className={`px-4 py-2 rounded-full text-sm ${isDarkMode ? "bg-zinc-800" : "bg-gray-200"}`}
-          >
-            Very Tidy
-          </span>
-          <span
-            className={`px-4 py-2 rounded-full text-sm ${isDarkMode ? "bg-zinc-800" : "bg-gray-200"}`}
-          >
-            Quiet Home
-          </span>
+          {editingLifestyle ? (
+            LIFESTYLE_OPTIONS.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag, lifestyleTags, setLifestyleTags)}
+                className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                  lifestyleTags.includes(tag)
+                    ? "bg-indigo-600 text-white"
+                    : isDarkMode
+                      ? "bg-zinc-800 text-gray-400"
+                      : "bg-gray-200 text-gray-600"
+                }`}
+              >
+                {lifestyleTags.includes(tag) ? tag : `+ ${tag}`}
+              </button>
+            ))
+          ) : lifestyleTags.length > 0 ? (
+            lifestyleTags.map((tag) => (
+              <span
+                key={tag}
+                className={`px-4 py-2 rounded-full text-sm ${isDarkMode ? "bg-zinc-800" : "bg-gray-200"}`}
+              >
+                {tag}
+              </span>
+            ))
+          ) : (
+            <button
+              onClick={() => setEditingLifestyle(true)}
+              className={`px-4 py-2 rounded-full text-sm flex items-center gap-1 ${isDarkMode ? "bg-zinc-800 text-gray-400" : "bg-gray-200 text-gray-600"}`}
+            >
+              <FaPlus size={12} /> Add lifestyle tags
+            </button>
+          )}
         </div>
       </div>
 
@@ -91,28 +247,70 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold">Hard Constraints</h3>
-          <button
-            className={`hover:opacity-70 ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-black"}`}
-          >
-            <FaEdit size={16} />
-          </button>
+          {editingConstraints ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setConstraintTags(currentUser?.constraintTags || []);
+                  setEditingConstraints(false);
+                }}
+                className={`hover:opacity-70 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
+              >
+                <FaTimes size={16} />
+              </button>
+              <button
+                onClick={handleSaveConstraints}
+                disabled={saving}
+                className="text-green-500 hover:opacity-70"
+              >
+                <FaCheck size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setEditingConstraints(true)}
+              className={`hover:opacity-70 ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-black"}`}
+            >
+              <FaEdit size={16} />
+            </button>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <span
-            className={`px-4 py-2 rounded-full text-sm ${isDarkMode ? "bg-zinc-800" : "bg-gray-200"}`}
-          >
-            Zone 2
-          </span>
-          <span
-            className={`px-4 py-2 rounded-full text-sm ${isDarkMode ? "bg-zinc-800" : "bg-gray-200"}`}
-          >
-            Long-Term
-          </span>
-          <span
-            className={`px-4 py-2 rounded-full text-sm ${isDarkMode ? "bg-zinc-800" : "bg-gray-200"}`}
-          >
-            Male Only
-          </span>
+          {editingConstraints ? (
+            CONSTRAINT_OPTIONS.map((tag) => (
+              <button
+                key={tag}
+                onClick={() =>
+                  toggleTag(tag, constraintTags, setConstraintTags)
+                }
+                className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                  constraintTags.includes(tag)
+                    ? "bg-indigo-600 text-white"
+                    : isDarkMode
+                      ? "bg-zinc-800 text-gray-400"
+                      : "bg-gray-200 text-gray-600"
+                }`}
+              >
+                {constraintTags.includes(tag) ? tag : `+ ${tag}`}
+              </button>
+            ))
+          ) : constraintTags.length > 0 ? (
+            constraintTags.map((tag) => (
+              <span
+                key={tag}
+                className={`px-4 py-2 rounded-full text-sm ${isDarkMode ? "bg-zinc-800" : "bg-gray-200"}`}
+              >
+                {tag}
+              </span>
+            ))
+          ) : (
+            <button
+              onClick={() => setEditingConstraints(true)}
+              className={`px-4 py-2 rounded-full text-sm flex items-center gap-1 ${isDarkMode ? "bg-zinc-800 text-gray-400" : "bg-gray-200 text-gray-600"}`}
+            >
+              <FaPlus size={12} /> Add constraint tags
+            </button>
+          )}
         </div>
       </div>
 
@@ -120,22 +318,53 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold">About</h3>
-          <button
-            className={`hover:opacity-70 ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-black"}`}
-          >
-            <FaEdit size={16} />
-          </button>
+          {editingBio ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setBio(currentUser?.bio || "");
+                  setEditingBio(false);
+                }}
+                className={`hover:opacity-70 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
+              >
+                <FaTimes size={16} />
+              </button>
+              <button
+                onClick={handleSaveBio}
+                disabled={saving}
+                className="text-green-500 hover:opacity-70"
+              >
+                <FaCheck size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setEditingBio(true)}
+              className={`hover:opacity-70 ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-black"}`}
+            >
+              <FaEdit size={16} />
+            </button>
+          )}
         </div>
-        <p
-          className={`text-sm leading-relaxed ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
-        >
-          Lorem Ipsum is simply dummy text of the printing and typesetting
-          industry. Lorem Ipsum has been the industry&apos;s standard dummy text
-          ever since the 1500s, when an unknown printer took a galley of type
-          and scrambled it to make a type specimen book. It has survived not
-          only five centuries, but also the leap into electronic typesetting,
-          remaining essentially including versions of Lorem Ipsum.
-        </p>
+        {editingBio ? (
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder="Tell others about yourself..."
+            rows={5}
+            className={`w-full px-4 py-3 rounded-xl text-sm leading-relaxed resize-none ${
+              isDarkMode
+                ? "bg-zinc-800 text-white placeholder-gray-500"
+                : "bg-gray-100 text-black placeholder-gray-400 border border-gray-300"
+            }`}
+          />
+        ) : (
+          <p
+            className={`text-sm leading-relaxed ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
+          >
+            {bio || "No bio yet. Click edit to add one!"}
+          </p>
+        )}
       </div>
 
       {/* Settings Modal */}

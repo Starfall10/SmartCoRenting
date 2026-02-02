@@ -1,15 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import { FcGoogle } from "react-icons/fc";
-import { ViewType } from "@/types";
+import { ViewType, UserData } from "@/types";
 import { signUpWithEmail, signInWithEmail } from "@/lib/firebase/auth";
+import { checkUserExists, createUser, getUserData } from "@/lib/firebase/user";
 
 interface LoginPageProps {
   setActiveView: (view: ViewType) => void;
   isDarkMode: boolean;
+  setCurrentUser: (user: UserData | null) => void;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ setActiveView, isDarkMode }) => {
+const LoginPage: React.FC<LoginPageProps> = ({
+  setActiveView,
+  isDarkMode,
+  setCurrentUser,
+}) => {
   const [isCreating, setIsCreating] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,18 +28,63 @@ const LoginPage: React.FC<LoginPageProps> = ({ setActiveView, isDarkMode }) => {
     setActiveView("home");
   };
 
+  const handleAuthSuccess = async (
+    uid: string,
+    userEmail: string,
+    name?: string,
+  ) => {
+    try {
+      // Create session cookie
+      await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid, email: userEmail, displayName: name }),
+      });
+
+      // Check if user exists in database
+      const userExists = await checkUserExists(uid);
+
+      if (userExists) {
+        // Existing user - fetch their data and go to home
+        const userData = await getUserData(uid);
+        setCurrentUser(userData);
+
+        // If profile is incomplete, send to profile completion
+        if (userData && !userData.profileComplete) {
+          setActiveView("addprofile");
+        } else {
+          setActiveView("home");
+        }
+      } else {
+        // New user - create entry and go to add profile
+        const newUser = await createUser(uid, userEmail, name);
+        setCurrentUser(newUser);
+        setActiveView("addprofile");
+      }
+    } catch (err) {
+      console.error("Error handling auth success:", err);
+      setError("Failed to complete login. Please try again.");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
+      let user;
       if (isCreating) {
-        await signUpWithEmail(email, password, displayName || undefined);
+        user = await signUpWithEmail(email, password, displayName || undefined);
       } else {
-        await signInWithEmail(email, password);
+        user = await signInWithEmail(email, password);
       }
-      setActiveView("home");
+
+      await handleAuthSuccess(
+        user.uid,
+        user.email || email,
+        user.displayName || displayName,
+      );
     } catch (err: any) {
       setError(err.message || "Authentication failed. Please try again.");
     } finally {
