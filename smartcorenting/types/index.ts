@@ -41,4 +41,30 @@ export interface UserData {
 
   // About/Bio
   bio?: string;
+
+  // Saved conversations (for quick access in messages hub)
+  savedConversations?: SavedConversation[];
+}
+
+export interface SavedConversation {
+  conversationId: string;
+  otherUid: string;
+  otherName: string;
+  addedAt: string;
+}
+
+export interface Conversation {
+  id: string;
+  participants: string[];
+  participantNames: Record<string, string>; // uid -> displayName
+  lastMessage: string;
+  lastMessageAt: Date | string;
+  createdAt: Date | string;
+}
+
+export interface Message {
+  id: string;
+  senderId: string;
+  text: string;
+  createdAt: Date | string;
 }

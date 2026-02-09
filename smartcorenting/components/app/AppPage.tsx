@@ -18,9 +18,10 @@ import { getUserData } from "@/lib/firebase/user";
 const AppPage = () => {
   const [activeView, setActiveView] = useState<ViewType>("welcome");
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [selectedMessageUser, setSelectedMessageUser] = useState<string | null>(
-    null,
-  );
+  const [selectedConversation, setSelectedConversation] = useState<{
+    id: string;
+    otherUser: { uid: string; name: string };
+  } | null>(null);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -106,14 +107,17 @@ const AppPage = () => {
         {activeView === "messages" && (
           <MessageHubPage
             setActiveView={setActiveView}
-            setSelectedMessageUser={setSelectedMessageUser}
+            setSelectedConversation={setSelectedConversation}
             isDarkMode={isDarkMode}
+            currentUser={currentUser}
           />
         )}
-        {activeView === "messageIndividual" && (
+        {activeView === "messageIndividual" && selectedConversation && (
           <MessagePage
             setActiveView={setActiveView}
-            userName={selectedMessageUser || "User"}
+            conversationId={selectedConversation.id}
+            otherUser={selectedConversation.otherUser}
+            currentUser={currentUser}
             isDarkMode={isDarkMode}
           />
         )}
