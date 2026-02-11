@@ -62,7 +62,7 @@ const MessagePage: React.FC<MessagePageProps> = ({
     }) => {
       if (roomId === conversationId && message) {
         setMessages((prev) => {
-          // Avoid duplicates (Firestore subscription might also add this)
+          // Avoid duplicates
           if (message.id && prev.some((m) => m.id === message.id)) {
             return prev;
           }
@@ -103,7 +103,7 @@ const MessagePage: React.FC<MessagePageProps> = ({
 
     const socket = socketRef.current;
 
-    // Emit message via Socket.IO (server will persist and broadcast)
+    // Emit message via Socket.IO
     socket.emit("chat:message", {
       roomId: conversationId,
       message: {

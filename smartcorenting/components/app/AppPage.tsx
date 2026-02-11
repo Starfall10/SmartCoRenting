@@ -28,8 +28,29 @@ const AppPage = () => {
   // Check for existing auth session on mount
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log(
+        "[AppPage] Auth state changed:",
+        firebaseUser
+          ? { uid: firebaseUser.uid, email: firebaseUser.email }
+          : null,
+      );
+
       if (firebaseUser) {
         try {
+          // Ensure session cookie is set
+          console.log(
+            "[AppPage] Setting session cookie for authenticated user",
+          );
+          await fetch("/api/auth/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName || "",
+            }),
+          });
+
           const userData = await getUserData(firebaseUser.uid);
           if (userData) {
             setCurrentUser(userData);
@@ -42,10 +63,11 @@ const AppPage = () => {
             setActiveView("login");
           }
         } catch (error) {
-          console.error("Error fetching user data:", error);
+          console.error("[AppPage] Error fetching user data:", error);
           setActiveView("login");
         }
       } else {
+        console.log("[AppPage] No Firebase user, clearing session");
         setCurrentUser(null);
         setActiveView("welcome");
       }

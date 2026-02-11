@@ -28,19 +28,49 @@ const MessageHubPage: React.FC<MessageHubPageProps> = ({
   useEffect(() => {
     async function fetchConversations() {
       try {
+        console.log("[MessageHub] Fetching conversations...");
+        console.log(
+          "[MessageHub] Current user:",
+          currentUser
+            ? { uid: currentUser.uid, email: currentUser.email }
+            : null,
+        );
+
         const res = await fetch("/api/conversations");
+        console.log("[MessageHub] Response status:", res.status);
+
+        if (res.status === 401) {
+          console.error("[MessageHub] Unauthorized - session may have expired");
+          // Try to refresh the session
+          const sessionRes = await fetch("/api/auth/session");
+          const sessionData = await sessionRes.json();
+          console.log("[MessageHub] Session check result:", sessionData);
+
+          if (!sessionData.session) {
+            console.error(
+              "[MessageHub] No valid session found, redirecting to login",
+            );
+            setActiveView("login");
+            return;
+          }
+        }
+
         const data = await res.json();
+        console.log("[MessageHub] Conversations data:", data);
+
         if (data.conversations) {
           setConversations(data.conversations);
+        } else if (data.error) {
+          console.error("[MessageHub] Error from API:", data.error);
         }
       } catch (error) {
-        console.error("Error fetching conversations:", error);
+        console.error("[MessageHub] Error fetching conversations:", error);
       } finally {
         setLoading(false);
       }
     }
     fetchConversations();
-  }, []);
+  }, [currentUser, setActiveView]);
 
   // Handle starting a new conversation by UID
   const handleStartConversation = async () => {

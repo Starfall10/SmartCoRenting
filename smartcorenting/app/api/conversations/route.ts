@@ -48,8 +48,19 @@ async function saveConversationToUser(
 // GET - Get all conversations for the current user
 export async function GET() {
   try {
+    console.log("[Conversations API] GET request received");
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session");
+    console.log("[Conversations API] Session cookie exists:", !!sessionCookie);
+
     const session = await getSession();
+    console.log(
+      "[Conversations API] Session parsed:",
+      session ? { uid: session.uid, email: session.email } : null,
+    );
+
     if (!session?.uid) {
+      console.log("[Conversations API] Unauthorized - no session or uid");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -58,6 +69,11 @@ export async function GET() {
       .where("participants", "array-contains", session.uid)
       .orderBy("lastMessageAt", "desc")
       .get();
+
+    console.log(
+      "[Conversations API] Found conversations:",
+      snapshot.docs.length,
+    );
 
     const conversations = snapshot.docs.map((doc) => {
       const data = doc.data();
@@ -73,7 +89,7 @@ export async function GET() {
 
     return NextResponse.json({ conversations });
   } catch (error) {
-    console.error("Error fetching conversations:", error);
+    console.error("[Conversations API] Error fetching conversations:", error);
     return NextResponse.json(
       { error: "Failed to fetch conversations" },
       { status: 500 },
@@ -84,8 +100,15 @@ export async function GET() {
 // POST - Create or get a conversation with another user
 export async function POST(request: NextRequest) {
   try {
+    console.log("[Conversations API] POST request received");
     const session = await getSession();
+    console.log(
+      "[Conversations API] Session for POST:",
+      session ? { uid: session.uid, email: session.email } : null,
+    );
+
     if (!session?.uid) {
+      console.log("[Conversations API] Unauthorized POST - no session or uid");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

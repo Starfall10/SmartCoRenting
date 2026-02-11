@@ -1,4 +1,5 @@
 import React from "react";
+import MapComponent from "./MapComponent";
 
 interface MeetingPageProps {
   isDarkMode: boolean;
@@ -21,7 +22,7 @@ const MeetingPage: React.FC<MeetingPageProps> = ({ isDarkMode }) => {
       {/* Map Area */}
       <div className="relative h-80 bg-gray-300 mb-6">
         <div className="absolute inset-0 flex items-center justify-center text-gray-600">
-          <span>Map View</span>
+          <MapComponent />
         </div>
 
         {/* Search Bar Overlay */}
@@ -98,11 +99,11 @@ const MeetingPage: React.FC<MeetingPageProps> = ({ isDarkMode }) => {
             className={`text-sm leading-relaxed ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
           >
             Lorem Ipsum is simply dummy text of the printing and typesetting
-            industry. Lorem Ipsum has been the industry's standard dummy text
-            ever since the 1500s, when an unknown printer took a galley of type
-            and scrambled it to make a type specimen book. It has survived not
-            only five centuries, but also the leap into electronic typesetting,
-            remaining essentially unchanged Lorem Ipsum.
+            industry. Lorem Ipsum has been the industry&apos;s standard dummy
+            text ever since the 1500s, when an unknown printer took a galley of
+            type and scrambled it to make a type specimen book. It has survived
+            not only five centuries, but also the leap into electronic
+            typesetting, remaining essentially unchanged Lorem Ipsum.
           </p>
         </div>
       </div>

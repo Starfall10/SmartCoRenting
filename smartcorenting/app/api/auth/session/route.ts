@@ -4,9 +4,16 @@ import { cookies } from "next/headers";
 // Set session cookie after login
 export async function POST(request: NextRequest) {
   try {
+    console.log("[Session API] POST - Creating new session");
     const { uid, email, displayName } = await request.json();
+    console.log("[Session API] Session data received:", {
+      uid,
+      email,
+      displayName,
+    });
 
     if (!uid || !email) {
+      console.log("[Session API] Missing required fields");
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 },
@@ -31,9 +38,10 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
+    console.log("[Session API] Session cookie set successfully");
     return NextResponse.json({ success: true, session: sessionData });
   } catch (error) {
-    console.error("Session creation error:", error);
+    console.error("[Session API] Session creation error:", error);
     return NextResponse.json(
       { error: "Failed to create session" },
       { status: 500 },
@@ -44,17 +52,23 @@ export async function POST(request: NextRequest) {
 // Get current session
 export async function GET() {
   try {
+    console.log("[Session API] GET - Retrieving session");
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("session");
 
     if (!sessionCookie) {
+      console.log("[Session API] No session cookie found");
       return NextResponse.json({ session: null });
     }
 
     const session = JSON.parse(sessionCookie.value);
+    console.log("[Session API] Session retrieved:", {
+      uid: session.uid,
+      email: session.email,
+    });
     return NextResponse.json({ session });
   } catch (error) {
-    console.error("Session retrieval error:", error);
+    console.error("[Session API] Session retrieval error:", error);
     return NextResponse.json({ session: null });
   }
 }
