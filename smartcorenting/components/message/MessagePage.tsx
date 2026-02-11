@@ -66,7 +66,6 @@ const MessagePage: React.FC<MessagePageProps> = ({
           if (message.id && prev.some((m) => m.id === message.id)) {
             return prev;
           }
-          // Also check for same text/sender/time to avoid duplicates
           const isDuplicate = prev.some(
             (m) =>
               m.senderId === message.senderId &&

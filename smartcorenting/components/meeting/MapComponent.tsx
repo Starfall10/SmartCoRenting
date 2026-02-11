@@ -1,23 +1,24 @@
 "use client";
 import React from "react";
-import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps";
+import { AdvancedMarker, Map } from "@vis.gl/react-google-maps";
 
-const MapComponent = () => {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!;
-  const center = { lat: 51.5074, lng: -0.1278 }; // London
+interface MapComponentProps {
+  center: { lat: number; lng: number };
+}
 
+const MapComponent = ({ center }: MapComponentProps) => {
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID;
   return (
-    <div style={{ height: 500, width: "100%" }}>
-      <APIProvider apiKey={apiKey}>
-        <Map
-          defaultCenter={center}
-          defaultZoom={12}
-          gestureHandling="greedy"
-          disableDefaultUI={false}
-        >
-          <Marker position={center} />
-        </Map>
-      </APIProvider>
+    <div className="h-full w-full">
+      <Map
+        defaultCenter={center}
+        defaultZoom={12}
+        mapId={mapId}
+        gestureHandling="greedy"
+        disableDefaultUI={false}
+      >
+        <AdvancedMarker position={center} />
+      </Map>
     </div>
   );
 };

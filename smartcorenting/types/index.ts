@@ -68,3 +68,19 @@ export interface Message {
   text: string;
   createdAt: Date | string;
 }
+
+export type PlaceDetails = {
+  placeId: string;
+  name?: string;
+  rating?: number;
+  description?: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
+};
+
+export type PlacePicked = {
+  placeId: string;
+  lat?: number;
+  lng?: number;
+};

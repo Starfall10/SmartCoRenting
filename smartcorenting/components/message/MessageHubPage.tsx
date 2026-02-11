@@ -217,7 +217,6 @@ const MessageHubPage: React.FC<MessageHubPageProps> = ({
           )}
         </div>
 
-        {/* Your User ID */}
         {currentUser && (
           <div
             className={`mb-6 p-3 rounded-xl ${isDarkMode ? "bg-zinc-900" : "bg-gray-100"}`}
