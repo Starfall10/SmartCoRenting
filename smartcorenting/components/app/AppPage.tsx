@@ -144,7 +144,9 @@ const AppPage = () => {
           />
         )}
         {activeView === "match" && <MatchMakingPage isDarkMode={isDarkMode} />}
-        {activeView === "meeting" && <MeetingPage isDarkMode={isDarkMode} />}
+        {activeView === "meeting" && (
+          <MeetingPage isDarkMode={isDarkMode} currentUser={currentUser} />
+        )}
         {activeView === "profile" && (
           <ProfilePage
             setActiveView={setActiveView}

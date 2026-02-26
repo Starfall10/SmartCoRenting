@@ -67,6 +67,38 @@ export interface Message {
   senderId: string;
   text: string;
   createdAt: Date | string;
+  // Location message fields (optional)
+  type?: "text" | "location" | "meeting_invite";
+  location?: PlaceDetails;
+  // Meeting invite fields (optional)
+  meetingId?: string;
+  meeting?: Meeting;
+}
+
+export type MeetingStatus = "pending" | "accepted" | "rejected" | "rescheduled";
+
+export interface Meeting {
+  id: string;
+  // Participants
+  creatorUid: string;
+  creatorName: string;
+  inviteeUid: string;
+  inviteeName: string;
+  // Meeting details
+  location: PlaceDetails;
+  scheduledDate: string; // ISO date string
+  scheduledTime: string; // HH:mm format
+  // Status
+  status: MeetingStatus;
+  // Who needs to respond to this meeting (for reschedules)
+  pendingApprovalFrom: string;
+  // Timestamps
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  // For rescheduling
+  previousDate?: string;
+  previousTime?: string;
+  rescheduleMessage?: string;
 }
 
 export type PlaceDetails = {

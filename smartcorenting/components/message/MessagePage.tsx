@@ -3,6 +3,8 @@ import { FaArrowLeft, FaRegUser, FaPaperPlane } from "react-icons/fa";
 import { ViewType, Message, UserData } from "@/types";
 import { getSocket } from "@/lib/socket";
 import { subscribeToMessages } from "@/lib/firebase/conversations";
+import LocationCard from "./LocationCard";
+import MeetingInviteCard from "./MeetingInviteCard";
 
 interface MessagePageProps {
   setActiveView: (view: ViewType) => void;
@@ -130,11 +132,11 @@ const MessagePage: React.FC<MessagePageProps> = ({
 
   return (
     <div
-      className={`min-h-screen flex flex-col ${isDarkMode ? "bg-black text-white" : "bg-white text-black"}`}
+      className={`h-screen flex flex-col ${isDarkMode ? "bg-black text-white" : "bg-white text-black"}`}
     >
-      {/* Header */}
+      {/* Header - Sticky */}
       <div
-        className={`flex items-center p-4 border-b ${isDarkMode ? "border-zinc-800" : "border-gray-200"}`}
+        className={`sticky top-0 z-10 flex items-center p-4 border-b ${isDarkMode ? "border-zinc-800 bg-black" : "border-gray-200 bg-white"}`}
       >
         <button
           onClick={() => setActiveView("messages")}
@@ -170,24 +172,44 @@ const MessagePage: React.FC<MessagePageProps> = ({
         ) : (
           messages.map((msg, index) => {
             const isMe = msg.senderId === currentUser?.uid;
+            const isLocationMessage = msg.type === "location" && msg.location;
+            const isMeetingInvite =
+              msg.type === "meeting_invite" && msg.meetingId;
+
             return (
               <div
                 key={msg.id || `temp-${index}`}
                 className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
               >
-                <div
-                  className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                    isMe
-                      ? isDarkMode
-                        ? "bg-indigo-600 text-white"
-                        : "bg-indigo-500 text-white"
-                      : isDarkMode
-                        ? "bg-zinc-800 text-white"
-                        : "bg-gray-200 text-black"
-                  }`}
-                >
-                  <p>{msg.text}</p>
-                </div>
+                {isLocationMessage ? (
+                  <LocationCard
+                    location={msg.location!}
+                    isDarkMode={isDarkMode}
+                    isOwnMessage={isMe}
+                  />
+                ) : isMeetingInvite ? (
+                  <MeetingInviteCard
+                    meetingId={msg.meetingId!}
+                    meetingData={msg.meeting}
+                    isDarkMode={isDarkMode}
+                    isOwnMessage={isMe}
+                    currentUser={currentUser}
+                  />
+                ) : (
+                  <div
+                    className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                      isMe
+                        ? isDarkMode
+                          ? "bg-indigo-600 text-white"
+                          : "bg-indigo-500 text-white"
+                        : isDarkMode
+                          ? "bg-zinc-800 text-white"
+                          : "bg-gray-200 text-black"
+                    }`}
+                  >
+                    <p>{msg.text}</p>
+                  </div>
+                )}
                 <span
                   className={`text-xs mt-1 ${isDarkMode ? "text-gray-500" : "text-gray-500"}`}
                 >
@@ -200,9 +222,9 @@ const MessagePage: React.FC<MessagePageProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
+      {/* Input Area - Sticky */}
       <div
-        className={`p-4 border-t ${isDarkMode ? "border-zinc-800" : "border-gray-200"}`}
+        className={`sticky bottom-0 z-10 p-4 border-t ${isDarkMode ? "border-zinc-800 bg-black" : "border-gray-200 bg-white"}`}
       >
         <div className="flex items-center gap-3">
           <input

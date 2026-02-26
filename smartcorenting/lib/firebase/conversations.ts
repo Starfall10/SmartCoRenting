@@ -143,12 +143,21 @@ export async function getConversationMessages(
   const snapshot = await getDocs(q);
   return snapshot.docs.map((doc) => {
     const data = doc.data();
-    return {
+    const message: Message = {
       id: doc.id,
       senderId: data.senderId,
       text: data.text,
       createdAt: data.createdAt?.toDate?.() || data.createdAt,
+      type: data.type || "text",
     };
+    if (data.type === "location" && data.location) {
+      message.location = data.location;
+    }
+    if (data.type === "meeting_invite" && data.meetingId) {
+      message.meetingId = data.meetingId;
+      message.meeting = data.meeting;
+    }
+    return message;
   });
 }
 
@@ -173,12 +182,21 @@ export function subscribeToMessages(
       if (data.createdAt) {
         createdAt = data.createdAt.toDate?.() || data.createdAt;
       }
-      return {
+      const message: Message = {
         id: doc.id,
         senderId: data.senderId,
         text: data.text,
         createdAt,
+        type: data.type || "text",
       };
+      if (data.type === "location" && data.location) {
+        message.location = data.location;
+      }
+      if (data.type === "meeting_invite" && data.meetingId) {
+        message.meetingId = data.meetingId;
+        message.meeting = data.meeting;
+      }
+      return message;
     });
     callback(messages);
   });

@@ -87,18 +87,44 @@ async function saveMessage(conversationId, message) {
       throw new Error("Conversation not found");
     }
 
-    const docRef = await messagesRef.add({
+    // Build message data - support text, location, and meeting_invite messages
+    const messageData = {
       senderId: message.senderId,
       text: message.text,
+      type: message.type || "text",
       createdAt: FieldValue.serverTimestamp(),
-    });
+    };
+
+    // Include location data if present
+    if (message.type === "location" && message.location) {
+      messageData.location = message.location;
+    }
+
+    // Include meeting data if present
+    if (message.type === "meeting_invite") {
+      if (message.meetingId) {
+        messageData.meetingId = message.meetingId;
+      }
+      if (message.meeting) {
+        messageData.meeting = message.meeting;
+      }
+    }
+
+    const docRef = await messagesRef.add(messageData);
 
     console.log(`Message saved with ID: ${docRef.id}`);
 
     // Update conversation's last message using set with merge to avoid errors
+    let lastMessageText = message.text;
+    if (message.type === "location") {
+      lastMessageText = `📍 ${message.location?.name || "Shared a location"}`;
+    } else if (message.type === "meeting_invite") {
+      lastMessageText = `📅 ${message.meeting?.location?.name || "Meeting invite"}`;
+    }
+
     await conversationRef.set(
       {
-        lastMessage: message.text,
+        lastMessage: lastMessageText,
         lastMessageAt: FieldValue.serverTimestamp(),
       },
       { merge: true },
@@ -131,7 +157,7 @@ io.on("connection", (socket) => {
   // Send a message to everyone in the room
   socket.on("chat:message", async ({ roomId, message }) => {
     // message object example:
-    // { text, senderId }
+    // { text, senderId, type?, location?, meetingId?, meeting? }
 
     try {
       // 1) Persist to Firebase
@@ -142,8 +168,24 @@ io.on("connection", (socket) => {
         id: messageId,
         senderId: message.senderId,
         text: message.text,
+        type: message.type || "text",
         createdAt: new Date().toISOString(),
       };
+
+      // Include location data if present
+      if (message.type === "location" && message.location) {
+        fullMessage.location = message.location;
+      }
+
+      // Include meeting data if present
+      if (message.type === "meeting_invite") {
+        if (message.meetingId) {
+          fullMessage.meetingId = message.meetingId;
+        }
+        if (message.meeting) {
+          fullMessage.meeting = message.meeting;
+        }
+      }
 
       io.to(roomId).emit("chat:message", { roomId, message: fullMessage });
     } catch (error) {
