@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useState } from "react";
 import MapComponent from "./MapComponent";
 import { APIProvider } from "@vis.gl/react-google-maps";
@@ -6,7 +7,13 @@ import PlaceSearch from "./PlaceSearch";
 import ContactPickerModal from "./ContactPickerModal";
 import ScheduleMeetingModal from "./ScheduleMeetingModal";
 import { subscribeToUserMeetings } from "@/lib/firebase/meetings";
-import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaRedo } from "react-icons/fa";
+import {
+  FaCalendarAlt,
+  FaClock,
+  FaMapMarkerAlt,
+  FaRedo,
+  FaEnvelope,
+} from "react-icons/fa";
 
 interface MeetingPageProps {
   isDarkMode: boolean;
@@ -26,6 +33,7 @@ const MeetingPage: React.FC<MeetingPageProps> = ({
   const [rescheduleTarget, setRescheduleTarget] = useState<Meeting | null>(
     null,
   );
+  const [sendingIcs, setSendingIcs] = useState<Record<string, boolean>>({});
   const center =
     selected?.lat && selected?.lng
       ? { lat: selected.lat, lng: selected.lng }
@@ -124,6 +132,38 @@ const MeetingPage: React.FC<MeetingPageProps> = ({
     setSelected(meeting.location);
     setRescheduleTarget(meeting);
     setIsScheduleModalOpen(true);
+  };
+
+  const handleSendIcs = async (meeting: Meeting) => {
+    setSendingIcs((prev) => ({ ...prev, [meeting.id]: true }));
+    try {
+      const response = await fetch("/api/send-ics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          meetingId: meeting.id,
+          title: `Meeting at ${meeting.location?.name || "TBD"}`,
+          description: `Meeting between ${meeting.creatorName} and ${meeting.inviteeName}`,
+          locationName: meeting.location?.name,
+          locationAddress: meeting.location?.address,
+          scheduledDate: meeting.scheduledDate,
+          scheduledTime: meeting.scheduledTime,
+          inviteeName: meeting.inviteeName,
+          creatorName: meeting.creatorName,
+        }),
+      });
+      if (response.ok) {
+        alert("Calendar invite sent to yusei5283@gmail.com!");
+      } else {
+        const data = await response.json();
+        alert(`Failed to send: ${data.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Error sending ICS:", error);
+      alert("Failed to send calendar invite");
+    } finally {
+      setSendingIcs((prev) => ({ ...prev, [meeting.id]: false }));
+    }
   };
 
   return (
@@ -332,17 +372,35 @@ const MeetingPage: React.FC<MeetingPageProps> = ({
                       </p>
                     </div>
 
-                    <button
-                      onClick={() => handleReschedule(meeting)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        isDarkMode
-                          ? "hover:bg-zinc-800 text-gray-400"
-                          : "hover:bg-gray-200 text-gray-600"
-                      }`}
-                      title="Reschedule"
-                    >
-                      <FaRedo size={14} />
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSendIcs(meeting)}
+                        disabled={sendingIcs[meeting.id]}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isDarkMode
+                            ? "hover:bg-zinc-800 text-gray-400"
+                            : "hover:bg-gray-200 text-gray-600"
+                        } disabled:opacity-50`}
+                        title="Send calendar invite"
+                      >
+                        {sendingIcs[meeting.id] ? (
+                          <span className="animate-spin">⏳</span>
+                        ) : (
+                          <FaEnvelope size={14} />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleReschedule(meeting)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isDarkMode
+                            ? "hover:bg-zinc-800 text-gray-400"
+                            : "hover:bg-gray-200 text-gray-600"
+                        }`}
+                        title="Reschedule"
+                      >
+                        <FaRedo size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
