@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { FaUpload, FaCheck, FaTimes, FaDownload } from "react-icons/fa";
+import {
+  FaUpload,
+  FaCheck,
+  FaTimes,
+  FaDownload,
+  FaTrash,
+} from "react-icons/fa";
 
 interface UploadResult {
   success: boolean;
@@ -10,10 +16,18 @@ interface UploadResult {
   errors?: string[];
 }
 
+interface DeleteResult {
+  success: boolean;
+  message: string;
+  deletedCount?: number;
+}
+
 const AdminPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<UploadResult | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteResult, setDeleteResult] = useState<DeleteResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,6 +64,35 @@ const AdminPage: React.FC = () => {
       });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDeletePersonas = async () => {
+    if (
+      !confirm(
+        "Are you sure you want to delete ALL persona users? This action cannot be undone.",
+      )
+    ) {
+      return;
+    }
+
+    setDeleting(true);
+    setDeleteResult(null);
+
+    try {
+      const response = await fetch("/api/admin/delete-personas", {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+      setDeleteResult(data);
+    } catch (error) {
+      setDeleteResult({
+        success: false,
+        message: `Delete failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -217,6 +260,52 @@ const AdminPage: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* Delete Personas Section */}
+        <div className="bg-zinc-800 rounded-2xl p-6 mt-6">
+          <h2 className="text-xl font-semibold mb-4 text-red-400">
+            Danger Zone
+          </h2>
+          <p className="text-gray-400 text-sm mb-4">
+            Delete all users with IDs starting with &quot;persona_&quot;. This
+            will remove all bulk-uploaded test users.
+          </p>
+          <button
+            onClick={handleDeletePersonas}
+            disabled={deleting}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 disabled:text-gray-500 rounded-lg transition-colors"
+          >
+            <FaTrash />
+            {deleting ? "Deleting..." : "Delete All Personas"}
+          </button>
+
+          {deleteResult && (
+            <div
+              className={`mt-4 rounded-lg p-4 ${deleteResult.success ? "bg-green-900/30" : "bg-red-900/30"}`}
+            >
+              <div className="flex items-center gap-2">
+                {deleteResult.success ? (
+                  <FaCheck className="text-green-400" />
+                ) : (
+                  <FaTimes className="text-red-400" />
+                )}
+                <span
+                  className={
+                    deleteResult.success ? "text-green-400" : "text-red-400"
+                  }
+                >
+                  {deleteResult.message}
+                </span>
+              </div>
+              {deleteResult.deletedCount !== undefined &&
+                deleteResult.deletedCount > 0 && (
+                  <p className="text-gray-400 text-sm mt-2">
+                    Deleted {deleteResult.deletedCount} persona users
+                  </p>
+                )}
+            </div>
+          )}
+        </div>
 
         {/* Field Reference */}
         <div className="bg-zinc-800 rounded-2xl p-6 mt-6">

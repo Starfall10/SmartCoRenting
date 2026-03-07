@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import WelcomePage from "../welcome/WelcomePage";
 import LoginPage from "../login/LoginPage";
 import HomePage from "../home/HomePage";
@@ -15,6 +15,15 @@ import { auth } from "@/lib/firebase/client";
 import { onAuthStateChanged } from "firebase/auth";
 import { getUserData } from "@/lib/firebase/user";
 
+const STORAGE_KEY = "smartcorenting_activeView";
+const VALID_PERSIST_VIEWS: ViewType[] = [
+  "home",
+  "messages",
+  "match",
+  "meeting",
+  "profile",
+];
+
 const AppPage = () => {
   const [activeView, setActiveView] = useState<ViewType>("welcome");
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -24,6 +33,19 @@ const AppPage = () => {
   } | null>(null);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Wrapper function to persist view changes
+  const handleSetActiveView = useCallback((view: ViewType) => {
+    setActiveView(view);
+    // Only persist main navigation views
+    if (VALID_PERSIST_VIEWS.includes(view)) {
+      try {
+        localStorage.setItem(STORAGE_KEY, view);
+      } catch (e) {
+        // localStorage might be unavailable
+      }
+    }
+  }, []);
 
   // Check for existing auth session on mount
   useEffect(() => {
@@ -57,7 +79,17 @@ const AppPage = () => {
             if (!userData.profileComplete) {
               setActiveView("addprofile");
             } else {
-              setActiveView("home");
+              // Try to restore saved view from localStorage
+              try {
+                const savedView = localStorage.getItem(STORAGE_KEY) as ViewType;
+                if (savedView && VALID_PERSIST_VIEWS.includes(savedView)) {
+                  setActiveView(savedView);
+                } else {
+                  setActiveView("home");
+                }
+              } catch {
+                setActiveView("home");
+              }
             }
           } else {
             setActiveView("login");
@@ -70,6 +102,12 @@ const AppPage = () => {
         console.log("[AppPage] No Firebase user, clearing session");
         setCurrentUser(null);
         setActiveView("welcome");
+        // Clear saved view on logout
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch {
+          // ignore
+        }
       }
       setLoading(false);
     });
@@ -102,25 +140,28 @@ const AppPage = () => {
     >
       <div className="w-full max-w-4xl relative">
         {activeView === "welcome" && (
-          <WelcomePage setActiveView={setActiveView} isDarkMode={isDarkMode} />
+          <WelcomePage
+            setActiveView={handleSetActiveView}
+            isDarkMode={isDarkMode}
+          />
         )}
         {activeView === "login" && (
           <LoginPage
-            setActiveView={setActiveView}
+            setActiveView={handleSetActiveView}
             isDarkMode={isDarkMode}
             setCurrentUser={setCurrentUser}
           />
         )}
         {activeView === "home" && (
           <HomePage
-            setActiveView={setActiveView}
+            setActiveView={handleSetActiveView}
             isDarkMode={isDarkMode}
             currentUser={currentUser}
           />
         )}
         {activeView === "addprofile" && (
           <AddProfilePage
-            setActiveView={setActiveView}
+            setActiveView={handleSetActiveView}
             isDarkMode={isDarkMode}
             currentUser={currentUser}
             setCurrentUser={setCurrentUser}
@@ -128,7 +169,7 @@ const AppPage = () => {
         )}
         {activeView === "messages" && (
           <MessageHubPage
-            setActiveView={setActiveView}
+            setActiveView={handleSetActiveView}
             setSelectedConversation={setSelectedConversation}
             isDarkMode={isDarkMode}
             currentUser={currentUser}
@@ -136,20 +177,34 @@ const AppPage = () => {
         )}
         {activeView === "messageIndividual" && selectedConversation && (
           <MessagePage
-            setActiveView={setActiveView}
+            setActiveView={handleSetActiveView}
             conversationId={selectedConversation.id}
             otherUser={selectedConversation.otherUser}
             currentUser={currentUser}
             isDarkMode={isDarkMode}
           />
         )}
-        {activeView === "match" && <MatchMakingPage isDarkMode={isDarkMode} />}
+        {activeView === "match" && (
+          <MatchMakingPage
+            isDarkMode={isDarkMode}
+            currentUser={currentUser}
+            setActiveView={handleSetActiveView}
+            setSelectedConversationUser={(user) => {
+              if (user) {
+                setSelectedConversation({
+                  id: "", // New conversation - will be created
+                  otherUser: { uid: user.odid, name: user.name },
+                });
+              }
+            }}
+          />
+        )}
         {activeView === "meeting" && (
           <MeetingPage isDarkMode={isDarkMode} currentUser={currentUser} />
         )}
         {activeView === "profile" && (
           <ProfilePage
-            setActiveView={setActiveView}
+            setActiveView={handleSetActiveView}
             isDarkMode={isDarkMode}
             setIsDarkMode={setIsDarkMode}
             currentUser={currentUser}
@@ -160,7 +215,7 @@ const AppPage = () => {
         {showNavbar && (
           <Navbar
             activeView={activeView}
-            setActiveView={setActiveView}
+            setActiveView={handleSetActiveView}
             isDarkMode={isDarkMode}
           />
         )}

@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { FaArrowLeft, FaRegUser, FaPaperPlane } from "react-icons/fa";
 import { ViewType, Message, UserData } from "@/types";
 import { getSocket } from "@/lib/socket";
-import { subscribeToMessages } from "@/lib/firebase/conversations";
+import {
+  subscribeToMessages,
+  getOrCreateConversation,
+} from "@/lib/firebase/conversations";
 import LocationCard from "./LocationCard";
 import MeetingInviteCard from "./MeetingInviteCard";
 
@@ -16,7 +19,7 @@ interface MessagePageProps {
 
 const MessagePage: React.FC<MessagePageProps> = ({
   setActiveView,
-  conversationId,
+  conversationId: initialConversationId,
   otherUser,
   currentUser,
   isDarkMode,
@@ -24,6 +27,9 @@ const MessagePage: React.FC<MessagePageProps> = ({
   const [messageText, setMessageText] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeConversationId, setActiveConversationId] = useState(
+    initialConversationId,
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef(getSocket());
 
@@ -36,18 +42,46 @@ const MessagePage: React.FC<MessagePageProps> = ({
     scrollToBottom();
   }, [messages]);
 
+  // Initialize conversation if needed (when coming from match page with empty id)
+  useEffect(() => {
+    const initConversation = async () => {
+      if (!currentUser || !otherUser) return;
+
+      // If we have a valid conversation ID, use it
+      if (initialConversationId) {
+        setActiveConversationId(initialConversationId);
+        return;
+      }
+
+      // Otherwise, create or get the conversation
+      try {
+        const conversation = await getOrCreateConversation(
+          currentUser.uid,
+          otherUser.uid,
+          currentUser.displayName,
+          otherUser.name,
+        );
+        setActiveConversationId(conversation.id);
+      } catch (error) {
+        console.error("Error creating conversation:", error);
+      }
+    };
+
+    initConversation();
+  }, [initialConversationId, currentUser, otherUser]);
+
   // Subscribe to Firestore messages and Socket.IO
   useEffect(() => {
-    if (!conversationId || !currentUser) return;
+    if (!activeConversationId || !currentUser) return;
 
     const socket = socketRef.current;
 
     // Join the socket room
-    socket.emit("chat:join", { roomId: conversationId });
+    socket.emit("chat:join", { roomId: activeConversationId });
 
     // Subscribe to Firestore for message history
     const unsubscribe = subscribeToMessages(
-      conversationId,
+      activeConversationId,
       (firestoreMessages) => {
         setMessages(firestoreMessages);
         setLoading(false);
@@ -62,7 +96,7 @@ const MessagePage: React.FC<MessagePageProps> = ({
       roomId: string;
       message: Message;
     }) => {
-      if (roomId === conversationId && message) {
+      if (roomId === activeConversationId && message) {
         setMessages((prev) => {
           // Avoid duplicates
           if (message.id && prev.some((m) => m.id === message.id)) {
@@ -92,21 +126,21 @@ const MessagePage: React.FC<MessagePageProps> = ({
     socket.on("chat:error", handleError);
 
     return () => {
-      socket.emit("chat:leave", { roomId: conversationId });
+      socket.emit("chat:leave", { roomId: activeConversationId });
       socket.off("chat:message", handleNewMessage);
       socket.off("chat:error", handleError);
       unsubscribe();
     };
-  }, [conversationId, currentUser]);
+  }, [activeConversationId, currentUser]);
 
   const handleSendMessage = () => {
-    if (!messageText.trim() || !currentUser) return;
+    if (!messageText.trim() || !currentUser || !activeConversationId) return;
 
     const socket = socketRef.current;
 
     // Emit message via Socket.IO
     socket.emit("chat:message", {
-      roomId: conversationId,
+      roomId: activeConversationId,
       message: {
         senderId: currentUser.uid,
         text: messageText.trim(),

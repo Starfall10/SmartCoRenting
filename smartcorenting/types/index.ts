@@ -125,3 +125,20 @@ export type PlacePicked = {
   lat?: number;
   lng?: number;
 };
+
+// Hard constraint filter preferences for matchmaking
+export interface HardConstraintFilters {
+  gender: boolean;
+  budget: boolean;
+  location: boolean;
+  moveInDate: boolean;
+  propertyType: boolean;
+}
+
+export const DEFAULT_HARD_CONSTRAINT_FILTERS: HardConstraintFilters = {
+  gender: true,
+  budget: true,
+  location: true,
+  moveInDate: true,
+  propertyType: true,
+};
