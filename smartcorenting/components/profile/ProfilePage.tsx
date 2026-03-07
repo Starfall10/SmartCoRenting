@@ -1,12 +1,8 @@
 import React, { useState } from "react";
-import { FaCog, FaEdit, FaTimes, FaCheck, FaPlus } from "react-icons/fa";
+import { FaCog, FaEdit, FaTimes, FaCheck } from "react-icons/fa";
 import { MdDarkMode, MdLightMode } from "react-icons/md";
 import { ViewType, UserData } from "@/types";
-import {
-  updateLifestyleTags,
-  updateConstraintTags,
-  updateBio,
-} from "@/lib/firebase/user";
+import { updateUserProfile } from "@/lib/firebase/user";
 import { signOutUser } from "@/lib/firebase/auth";
 
 interface ProfilePageProps {
@@ -17,35 +13,65 @@ interface ProfilePageProps {
   setCurrentUser: (user: UserData | null) => void;
 }
 
-const LIFESTYLE_OPTIONS = [
-  "Night Owl",
-  "Early Bird",
-  "Very Tidy",
-  "Relaxed Clean",
-  "Quiet Home",
-  "Social",
-  "Works from Home",
-  "Pet Friendly",
-  "Fitness Enthusiast",
-  "Homebody",
-  "Traveler",
-  "Foodie",
-];
+// Slider preference configuration (same as AddProfilePage)
+const sliderPreferences = [
+  {
+    key: "sleepSchedule",
+    label: "Sleep schedule",
+    left: "Early sleeper",
+    right: "Night owl",
+  },
+  {
+    key: "cleanliness",
+    label: "Cleanliness",
+    left: "Relaxed cleanliness",
+    right: "Very tidy",
+  },
+  {
+    key: "noiseTolerance",
+    label: "Noise tolerance",
+    left: "Need quiet",
+    right: "Noise tolerant",
+  },
+  {
+    key: "workHabits",
+    label: "Study/work habits",
+    left: "Rarely home",
+    right: "Mostly home",
+  },
+  {
+    key: "socialLifestyle",
+    label: "Social lifestyle",
+    left: "Private",
+    right: "Very social",
+  },
+  {
+    key: "guestFrequency",
+    label: "Guest frequency",
+    left: "No guests",
+    right: "Frequent guests",
+  },
+  {
+    key: "cookingFrequency",
+    label: "Cooking frequency",
+    left: "Rarely cook",
+    right: "Cook daily",
+  },
+  {
+    key: "personalSpace",
+    label: "Personal space",
+    left: "Independent",
+    right: "Shared/social",
+  },
+  {
+    key: "activityLevel",
+    label: "Activity level",
+    left: "Quiet lifestyle",
+    right: "Lively household",
+  },
+] as const;
 
-const CONSTRAINT_OPTIONS = [
-  "Zone 1",
-  "Zone 2",
-  "Zone 3",
-  "Zone 4",
-  "Short-Term",
-  "Long-Term",
-  "Male Only",
-  "Female Only",
-  "No Smoking",
-  "No Pets",
-  "Vegetarian Kitchen",
-  "Flexible Schedule",
-];
+type SliderKey = (typeof sliderPreferences)[number]["key"];
 
 const ProfilePage: React.FC<ProfilePageProps> = ({
   setActiveView,
@@ -55,17 +81,30 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
   setCurrentUser,
 }) => {
   const [showSettings, setShowSettings] = useState(false);
-  const [editingLifestyle, setEditingLifestyle] = useState(false);
-  const [editingConstraints, setEditingConstraints] = useState(false);
-  const [editingBio, setEditingBio] = useState(false);
-  const [bio, setBio] = useState(currentUser?.bio || "");
-  const [lifestyleTags, setLifestyleTags] = useState<string[]>(
-    currentUser?.lifestyleTags || [],
-  );
-  const [constraintTags, setConstraintTags] = useState<string[]>(
-    currentUser?.constraintTags || [],
-  );
+  const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Edit form state
+  const [editData, setEditData] = useState({
+    gender: currentUser?.gender || "",
+    genderPreference: currentUser?.genderPreference || "",
+    monthlyBudget: currentUser?.monthlyBudget || "",
+    preferredLocation: currentUser?.preferredLocation || "",
+    moveInDate: currentUser?.moveInDate || "",
+    lengthOfStay: currentUser?.lengthOfStay || "",
+    propertyType: currentUser?.propertyType || "",
+    smoking: currentUser?.smoking ?? false,
+    pets: currentUser?.pets ?? false,
+    sleepSchedule: currentUser?.sleepSchedule ?? 3,
+    cleanliness: currentUser?.cleanliness ?? 3,
+    noiseTolerance: currentUser?.noiseTolerance ?? 3,
+    workHabits: currentUser?.workHabits ?? 3,
+    socialLifestyle: currentUser?.socialLifestyle ?? 3,
+    guestFrequency: currentUser?.guestFrequency ?? 3,
+    cookingFrequency: currentUser?.cookingFrequency ?? 3,
+    personalSpace: currentUser?.personalSpace ?? 3,
+    activityLevel: currentUser?.activityLevel ?? 3,
+  });
 
   const handleLogout = async () => {
     try {
@@ -79,63 +118,63 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
     }
   };
 
-  const toggleTag = (
-    tag: string,
-    tags: string[],
-    setTags: (tags: string[]) => void,
-  ) => {
-    if (tags.includes(tag)) {
-      setTags(tags.filter((t) => t !== tag));
-    } else {
-      setTags([...tags, tag]);
-    }
+  const handleStartEdit = () => {
+    setEditData({
+      gender: currentUser?.gender || "",
+      genderPreference: currentUser?.genderPreference || "",
+      monthlyBudget: currentUser?.monthlyBudget || "",
+      preferredLocation: currentUser?.preferredLocation || "",
+      moveInDate: currentUser?.moveInDate || "",
+      lengthOfStay: currentUser?.lengthOfStay || "",
+      propertyType: currentUser?.propertyType || "",
+      smoking: currentUser?.smoking ?? false,
+      pets: currentUser?.pets ?? false,
+      sleepSchedule: currentUser?.sleepSchedule ?? 3,
+      cleanliness: currentUser?.cleanliness ?? 3,
+      noiseTolerance: currentUser?.noiseTolerance ?? 3,
+      workHabits: currentUser?.workHabits ?? 3,
+      socialLifestyle: currentUser?.socialLifestyle ?? 3,
+      guestFrequency: currentUser?.guestFrequency ?? 3,
+      cookingFrequency: currentUser?.cookingFrequency ?? 3,
+      personalSpace: currentUser?.personalSpace ?? 3,
+      activityLevel: currentUser?.activityLevel ?? 3,
+    });
+    setEditing(true);
   };
 
-  const handleSaveLifestyle = async () => {
+  const handleSave = async () => {
     if (!currentUser) return;
     setSaving(true);
     try {
-      await updateLifestyleTags(currentUser.uid, lifestyleTags);
-      setCurrentUser({ ...currentUser, lifestyleTags });
-      setEditingLifestyle(false);
+      await updateUserProfile(currentUser.uid, editData);
+      setCurrentUser({ ...currentUser, ...editData });
+      setEditing(false);
     } catch (error) {
-      console.error("Error saving lifestyle tags:", error);
+      console.error("Error saving profile:", error);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSaveConstraints = async () => {
-    if (!currentUser) return;
-    setSaving(true);
-    try {
-      await updateConstraintTags(currentUser.uid, constraintTags);
-      setCurrentUser({ ...currentUser, constraintTags });
-      setEditingConstraints(false);
-    } catch (error) {
-      console.error("Error saving constraint tags:", error);
-    } finally {
-      setSaving(false);
-    }
+  const handleCancel = () => {
+    setEditing(false);
   };
 
-  const handleSaveBio = async () => {
-    if (!currentUser) return;
-    setSaving(true);
-    try {
-      await updateBio(currentUser.uid, bio);
-      setCurrentUser({ ...currentUser, bio });
-      setEditingBio(false);
-    } catch (error) {
-      console.error("Error saving bio:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
+  const displayName = currentUser?.displayName || "User";
 
-  const displayName =
-    currentUser?.fullName || currentUser?.displayName || "User";
-  const displayAge = currentUser?.age || "N/A";
+  const selectClasses = `w-full px-3 py-2 rounded-lg text-sm ${
+    isDarkMode
+      ? "bg-zinc-800 border-zinc-700 text-white"
+      : "bg-white border-gray-300 text-black"
+  } border`;
+
+  const getSliderLabel = (key: SliderKey, value: number) => {
+    const pref = sliderPreferences.find((p) => p.key === key);
+    if (!pref) return "";
+    if (value <= 2) return pref.left;
+    if (value >= 4) return pref.right;
+    return "Balanced";
+  };
 
   return (
     <div
@@ -155,7 +194,33 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
         </button>
       </div>
 
-      <h1 className="text-3xl font-bold mb-8">Profile</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Profile</h1>
+        {editing ? (
+          <div className="flex gap-2">
+            <button
+              onClick={handleCancel}
+              className={`p-2 rounded-full ${isDarkMode ? "hover:bg-zinc-800" : "hover:bg-gray-100"}`}
+            >
+              <FaTimes size={18} />
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="p-2 rounded-full text-green-500 hover:bg-green-500/10"
+            >
+              <FaCheck size={18} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleStartEdit}
+            className={`p-2 rounded-full ${isDarkMode ? "hover:bg-zinc-800" : "hover:bg-gray-100"}`}
+          >
+            <FaEdit size={18} />
+          </button>
+        )}
+      </div>
 
       {/* Profile Header */}
       <div className="flex items-center mb-8">
@@ -169,202 +234,323 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
         <div>
           <h2 className="text-2xl font-bold">{displayName}</h2>
           <p className={isDarkMode ? "text-gray-400" : "text-gray-600"}>
-            Age: {displayAge}
+            {currentUser?.email}
           </p>
         </div>
       </div>
 
-      {/* Life Style Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold">Life Style</h3>
-          {editingLifestyle ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setLifestyleTags(currentUser?.lifestyleTags || []);
-                  setEditingLifestyle(false);
-                }}
-                className={`hover:opacity-70 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
-              >
-                <FaTimes size={16} />
-              </button>
-              <button
-                onClick={handleSaveLifestyle}
-                disabled={saving}
-                className="text-green-500 hover:opacity-70"
-              >
-                <FaCheck size={16} />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setEditingLifestyle(true)}
-              className={`hover:opacity-70 ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-black"}`}
-            >
-              <FaEdit size={16} />
-            </button>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {editingLifestyle ? (
-            LIFESTYLE_OPTIONS.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => toggleTag(tag, lifestyleTags, setLifestyleTags)}
-                className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                  lifestyleTags.includes(tag)
-                    ? "bg-indigo-600 text-white"
-                    : isDarkMode
-                      ? "bg-zinc-800 text-gray-400"
-                      : "bg-gray-200 text-gray-600"
-                }`}
-              >
-                {lifestyleTags.includes(tag) ? tag : `+ ${tag}`}
-              </button>
-            ))
-          ) : lifestyleTags.length > 0 ? (
-            lifestyleTags.map((tag) => (
-              <span
-                key={tag}
-                className={`px-4 py-2 rounded-full text-sm ${isDarkMode ? "bg-zinc-800" : "bg-gray-200"}`}
-              >
-                {tag}
-              </span>
-            ))
-          ) : (
-            <button
-              onClick={() => setEditingLifestyle(true)}
-              className={`px-4 py-2 rounded-full text-sm flex items-center gap-1 ${isDarkMode ? "bg-zinc-800 text-gray-400" : "bg-gray-200 text-gray-600"}`}
-            >
-              <FaPlus size={12} /> Add lifestyle tags
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Hard Constraints Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold">Hard Constraints</h3>
-          {editingConstraints ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setConstraintTags(currentUser?.constraintTags || []);
-                  setEditingConstraints(false);
-                }}
-                className={`hover:opacity-70 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
-              >
-                <FaTimes size={16} />
-              </button>
-              <button
-                onClick={handleSaveConstraints}
-                disabled={saving}
-                className="text-green-500 hover:opacity-70"
-              >
-                <FaCheck size={16} />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setEditingConstraints(true)}
-              className={`hover:opacity-70 ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-black"}`}
-            >
-              <FaEdit size={16} />
-            </button>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {editingConstraints ? (
-            CONSTRAINT_OPTIONS.map((tag) => (
-              <button
-                key={tag}
-                onClick={() =>
-                  toggleTag(tag, constraintTags, setConstraintTags)
+      {/* Basic Info Section */}
+      <div
+        className={`rounded-2xl p-4 mb-4 ${isDarkMode ? "bg-zinc-900" : "bg-gray-100"}`}
+      >
+        <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <InfoItem
+            label="Gender"
+            value={currentUser?.gender}
+            editing={editing}
+            editComponent={
+              <select
+                value={editData.gender}
+                onChange={(e) =>
+                  setEditData({ ...editData, gender: e.target.value })
                 }
-                className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                  constraintTags.includes(tag)
-                    ? "bg-indigo-600 text-white"
-                    : isDarkMode
-                      ? "bg-zinc-800 text-gray-400"
-                      : "bg-gray-200 text-gray-600"
-                }`}
+                className={selectClasses}
               >
-                {constraintTags.includes(tag) ? tag : `+ ${tag}`}
-              </button>
-            ))
-          ) : constraintTags.length > 0 ? (
-            constraintTags.map((tag) => (
-              <span
-                key={tag}
-                className={`px-4 py-2 rounded-full text-sm ${isDarkMode ? "bg-zinc-800" : "bg-gray-200"}`}
+                <option value="">Select</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Non-binary">Non-binary</option>
+                <option value="Prefer not to say">Prefer not to say</option>
+              </select>
+            }
+            isDarkMode={isDarkMode}
+          />
+          <InfoItem
+            label="Preference"
+            value={currentUser?.genderPreference}
+            editing={editing}
+            editComponent={
+              <select
+                value={editData.genderPreference}
+                onChange={(e) =>
+                  setEditData({ ...editData, genderPreference: e.target.value })
+                }
+                className={selectClasses}
               >
-                {tag}
-              </span>
-            ))
-          ) : (
-            <button
-              onClick={() => setEditingConstraints(true)}
-              className={`px-4 py-2 rounded-full text-sm flex items-center gap-1 ${isDarkMode ? "bg-zinc-800 text-gray-400" : "bg-gray-200 text-gray-600"}`}
-            >
-              <FaPlus size={12} /> Add constraint tags
-            </button>
-          )}
+                <option value="">Select</option>
+                <option value="Male Only">Male Only</option>
+                <option value="Female Only">Female Only</option>
+                <option value="No Preference">No Preference</option>
+              </select>
+            }
+            isDarkMode={isDarkMode}
+          />
+          <InfoItem
+            label="Budget"
+            value={currentUser?.monthlyBudget}
+            editing={editing}
+            editComponent={
+              <select
+                value={editData.monthlyBudget}
+                onChange={(e) =>
+                  setEditData({ ...editData, monthlyBudget: e.target.value })
+                }
+                className={selectClasses}
+              >
+                <option value="">Select</option>
+                <option value="£500-£800">£500-£800</option>
+                <option value="£800-£1200">£800-£1200</option>
+                <option value="£1200-£1500">£1200-£1500</option>
+                <option value="£1500+">£1500+</option>
+              </select>
+            }
+            isDarkMode={isDarkMode}
+          />
+          <InfoItem
+            label="Location"
+            value={currentUser?.preferredLocation}
+            editing={editing}
+            editComponent={
+              <input
+                type="text"
+                value={editData.preferredLocation}
+                onChange={(e) =>
+                  setEditData({
+                    ...editData,
+                    preferredLocation: e.target.value,
+                  })
+                }
+                className={selectClasses}
+                placeholder="Location"
+              />
+            }
+            isDarkMode={isDarkMode}
+          />
+          <InfoItem
+            label="Move-in"
+            value={currentUser?.moveInDate}
+            editing={editing}
+            editComponent={
+              <select
+                value={editData.moveInDate}
+                onChange={(e) =>
+                  setEditData({ ...editData, moveInDate: e.target.value })
+                }
+                className={selectClasses}
+              >
+                <option value="">Select</option>
+                <option value="Immediately">Immediately</option>
+                <option value="Within 1 month">Within 1 month</option>
+                <option value="Within 3 months">Within 3 months</option>
+                <option value="Within 6 months">Within 6 months</option>
+                <option value="Flexible">Flexible</option>
+              </select>
+            }
+            isDarkMode={isDarkMode}
+          />
+          <InfoItem
+            label="Stay Length"
+            value={currentUser?.lengthOfStay}
+            editing={editing}
+            editComponent={
+              <select
+                value={editData.lengthOfStay}
+                onChange={(e) =>
+                  setEditData({ ...editData, lengthOfStay: e.target.value })
+                }
+                className={selectClasses}
+              >
+                <option value="">Select</option>
+                <option value="Short-term (1-6 months)">Short-term</option>
+                <option value="Medium-term (6-12 months)">Medium-term</option>
+                <option value="Long-term (12+ months)">Long-term</option>
+              </select>
+            }
+            isDarkMode={isDarkMode}
+          />
+          <InfoItem
+            label="Property"
+            value={currentUser?.propertyType}
+            editing={editing}
+            editComponent={
+              <select
+                value={editData.propertyType}
+                onChange={(e) =>
+                  setEditData({ ...editData, propertyType: e.target.value })
+                }
+                className={selectClasses}
+              >
+                <option value="">Select</option>
+                <option value="Flat">Flat</option>
+                <option value="House">House</option>
+                <option value="Studio">Studio</option>
+                <option value="Shared Room">Shared Room</option>
+              </select>
+            }
+            isDarkMode={isDarkMode}
+          />
         </div>
       </div>
 
-      {/* About Section */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold">About</h3>
-          {editingBio ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setBio(currentUser?.bio || "");
-                  setEditingBio(false);
-                }}
-                className={`hover:opacity-70 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
-              >
-                <FaTimes size={16} />
-              </button>
-              <button
-                onClick={handleSaveBio}
-                disabled={saving}
-                className="text-green-500 hover:opacity-70"
-              >
-                <FaCheck size={16} />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setEditingBio(true)}
-              className={`hover:opacity-70 ${isDarkMode ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-black"}`}
+      {/* Yes/No Preferences */}
+      <div
+        className={`rounded-2xl p-4 mb-4 ${isDarkMode ? "bg-zinc-900" : "bg-gray-100"}`}
+      >
+        <h3 className="text-lg font-semibold mb-4">Living Preferences</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p
+              className={`text-xs mb-1 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
             >
-              <FaEdit size={16} />
-            </button>
-          )}
+              Smoking
+            </p>
+            {editing ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditData({ ...editData, smoking: true })}
+                  className={`flex-1 py-1.5 rounded-lg text-sm ${
+                    editData.smoking
+                      ? "bg-indigo-600 text-white"
+                      : isDarkMode
+                        ? "bg-zinc-800 text-gray-400"
+                        : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => setEditData({ ...editData, smoking: false })}
+                  className={`flex-1 py-1.5 rounded-lg text-sm ${
+                    !editData.smoking
+                      ? "bg-indigo-600 text-white"
+                      : isDarkMode
+                        ? "bg-zinc-800 text-gray-400"
+                        : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+            ) : (
+              <p className="font-medium">
+                {currentUser?.smoking ? "Yes" : "No"}
+              </p>
+            )}
+          </div>
+          <div>
+            <p
+              className={`text-xs mb-1 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
+            >
+              Pets
+            </p>
+            {editing ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditData({ ...editData, pets: true })}
+                  className={`flex-1 py-1.5 rounded-lg text-sm ${
+                    editData.pets
+                      ? "bg-indigo-600 text-white"
+                      : isDarkMode
+                        ? "bg-zinc-800 text-gray-400"
+                        : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => setEditData({ ...editData, pets: false })}
+                  className={`flex-1 py-1.5 rounded-lg text-sm ${
+                    !editData.pets
+                      ? "bg-indigo-600 text-white"
+                      : isDarkMode
+                        ? "bg-zinc-800 text-gray-400"
+                        : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+            ) : (
+              <p className="font-medium">{currentUser?.pets ? "Yes" : "No"}</p>
+            )}
+          </div>
         </div>
-        {editingBio ? (
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            placeholder="Tell others about yourself..."
-            rows={5}
-            className={`w-full px-4 py-3 rounded-xl text-sm leading-relaxed resize-none ${
-              isDarkMode
-                ? "bg-zinc-800 text-white placeholder-gray-500"
-                : "bg-gray-100 text-black placeholder-gray-400 border border-gray-300"
-            }`}
-          />
-        ) : (
-          <p
-            className={`text-sm leading-relaxed ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
-          >
-            {bio || "No bio yet. Click edit to add one!"}
-          </p>
-        )}
+      </div>
+
+      {/* Lifestyle Preferences (Sliders) */}
+      <div
+        className={`rounded-2xl p-4 mb-4 ${isDarkMode ? "bg-zinc-900" : "bg-gray-100"}`}
+      >
+        <h3 className="text-lg font-semibold mb-4">Lifestyle Preferences</h3>
+        <div className="space-y-4">
+          {sliderPreferences.map((pref) => {
+            const value = (currentUser?.[pref.key] as number | undefined) ?? 3;
+            const editValue = editData[pref.key];
+            return (
+              <div key={pref.key}>
+                <div className="flex justify-between items-center mb-1">
+                  <p className="text-sm font-medium">{pref.label}</p>
+                  <p
+                    className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
+                  >
+                    {editing
+                      ? getSliderLabel(pref.key, editValue)
+                      : getSliderLabel(pref.key, value)}
+                  </p>
+                </div>
+                {editing ? (
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs w-20 ${isDarkMode ? "text-gray-500" : "text-gray-400"}`}
+                    >
+                      {pref.left}
+                    </span>
+                    <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      value={editValue}
+                      onChange={(e) =>
+                        setEditData({
+                          ...editData,
+                          [pref.key]: parseInt(e.target.value),
+                        })
+                      }
+                      className="flex-1 h-2 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      style={{
+                        background: isDarkMode
+                          ? `linear-gradient(to right, #4f46e5 0%, #4f46e5 ${(editValue - 1) * 25}%, #3f3f46 ${(editValue - 1) * 25}%, #3f3f46 100%)`
+                          : `linear-gradient(to right, #4f46e5 0%, #4f46e5 ${(editValue - 1) * 25}%, #d1d5db ${(editValue - 1) * 25}%, #d1d5db 100%)`,
+                      }}
+                    />
+                    <span
+                      className={`text-xs w-20 text-right ${isDarkMode ? "text-gray-500" : "text-gray-400"}`}
+                    >
+                      {pref.right}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`flex-1 h-2 rounded-full ${isDarkMode ? "bg-zinc-800" : "bg-gray-300"}`}
+                    >
+                      <div
+                        className="h-full rounded-full bg-indigo-600"
+                        style={{ width: `${(value - 1) * 25}%` }}
+                      />
+                    </div>
+                    <span
+                      className={`text-xs w-6 text-center ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
+                    >
+                      {value}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Settings Modal */}
@@ -427,5 +613,23 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
     </div>
   );
 };
+
+// Helper component for displaying info items
+const InfoItem: React.FC<{
+  label: string;
+  value?: string;
+  editing: boolean;
+  editComponent: React.ReactNode;
+  isDarkMode: boolean;
+}> = ({ label, value, editing, editComponent, isDarkMode }) => (
+  <div>
+    <p
+      className={`text-xs mb-1 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
+    >
+      {label}
+    </p>
+    {editing ? editComponent : <p className="font-medium">{value || "—"}</p>}
+  </div>
+);
 
 export default ProfilePage;

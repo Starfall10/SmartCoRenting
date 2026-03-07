@@ -18,28 +18,37 @@ export interface UserData {
   createdAt: string;
   updatedAt: string;
   profileComplete: boolean;
-  profileStep: number; // Track which step user is on (1-10)
+  profileStep: number; // Track which step user is on (1-3)
 
-  // Profile Creation (Step 1)
-  fullName?: string;
+  // Basic Info (Step 1)
   gender?: string;
-  age?: number;
-
-  // Hard Constraints (Step 2)
+  genderPreference?: string;
+  monthlyBudget?: string;
   preferredLocation?: string;
   moveInDate?: string;
   lengthOfStay?: string;
-  monthlyBudget?: string;
-  genderPreference?: string;
   propertyType?: string;
 
-  // Lifestyle tags
+  // Yes/No Preferences (Step 2)
+  smoking?: boolean;
+  pets?: boolean;
+
+  // Lifestyle Preferences - Scale 1-5 (Step 3)
+  sleepSchedule?: number; // 1: Early sleeper, 5: Night owl
+  cleanliness?: number; // 1: Relaxed cleanliness, 5: Very tidy
+  noiseTolerance?: number; // 1: Need quiet, 5: Noise tolerant
+  workHabits?: number; // 1: Rarely home, 5: Mostly home
+  socialLifestyle?: number; // 1: Private, 5: Very social
+  guestFrequency?: number; // 1: No guests, 5: Frequent guests
+  cookingFrequency?: number; // 1: Rarely cook, 5: Cook daily
+  personalSpace?: number; // 1: Independent, 5: Shared/social
+  activityLevel?: number; // 1: Quiet lifestyle, 5: Lively household
+
+  // Legacy fields (kept for backward compatibility)
+  fullName?: string;
+  age?: number;
   lifestyleTags?: string[];
-
-  // Hard constraint tags
   constraintTags?: string[];
-
-  // About/Bio
   bio?: string;
 
   // Saved conversations (for quick access in messages hub)
