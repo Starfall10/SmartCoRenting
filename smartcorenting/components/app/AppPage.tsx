@@ -16,13 +16,21 @@ import { onAuthStateChanged } from "firebase/auth";
 import { getUserData } from "@/lib/firebase/user";
 
 const STORAGE_KEY = "smartcorenting_activeView";
-const VALID_PERSIST_VIEWS: ViewType[] = [
+type PersistView = Exclude<ViewType, null>;
+
+const VALID_PERSIST_VIEWS: PersistView[] = [
   "home",
   "messages",
   "match",
   "meeting",
   "profile",
 ];
+
+const isPersistView = (view: ViewType): view is PersistView =>
+  view !== null && VALID_PERSIST_VIEWS.includes(view);
+
+const isStoredPersistView = (view: string | null): view is PersistView =>
+  view !== null && VALID_PERSIST_VIEWS.includes(view as PersistView);
 
 const AppPage = () => {
   const [activeView, setActiveView] = useState<ViewType>("welcome");
@@ -34,20 +42,15 @@ const AppPage = () => {
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Wrapper function to persist view changes
   const handleSetActiveView = useCallback((view: ViewType) => {
     setActiveView(view);
-    // Only persist main navigation views
-    if (VALID_PERSIST_VIEWS.includes(view)) {
+    if (isPersistView(view)) {
       try {
         localStorage.setItem(STORAGE_KEY, view);
-      } catch (e) {
-        // localStorage might be unavailable
-      }
+      } catch {}
     }
   }, []);
 
-  // Check for existing auth session on mount
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log(
@@ -59,7 +62,6 @@ const AppPage = () => {
 
       if (firebaseUser) {
         try {
-          // Ensure session cookie is set
           console.log(
             "[AppPage] Setting session cookie for authenticated user",
           );
@@ -79,10 +81,9 @@ const AppPage = () => {
             if (!userData.profileComplete) {
               setActiveView("addprofile");
             } else {
-              // Try to restore saved view from localStorage
               try {
-                const savedView = localStorage.getItem(STORAGE_KEY) as ViewType;
-                if (savedView && VALID_PERSIST_VIEWS.includes(savedView)) {
+                const savedView = localStorage.getItem(STORAGE_KEY);
+                if (isStoredPersistView(savedView)) {
                   setActiveView(savedView);
                 } else {
                   setActiveView("home");
@@ -102,12 +103,9 @@ const AppPage = () => {
         console.log("[AppPage] No Firebase user, clearing session");
         setCurrentUser(null);
         setActiveView("welcome");
-        // Clear saved view on logout
         try {
           localStorage.removeItem(STORAGE_KEY);
-        } catch {
-          // ignore
-        }
+        } catch {}
       }
       setLoading(false);
     });
@@ -192,7 +190,7 @@ const AppPage = () => {
             setSelectedConversationUser={(user) => {
               if (user) {
                 setSelectedConversation({
-                  id: "", // New conversation - will be created
+                  id: "",
                   otherUser: { uid: user.odid, name: user.name },
                 });
               }

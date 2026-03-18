@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 function generateICS(meeting: {
   title: string;
   description: string;
   location: string;
-  startDate: string; // ISO date YYYY-MM-DD
-  startTime: string; // HH:mm
+  startDate: string;
+  startTime: string;
   durationMinutes?: number;
 }): string {
   const {
@@ -20,15 +18,12 @@ function generateICS(meeting: {
     durationMinutes = 60,
   } = meeting;
 
-  // Parse date and time
   const [year, month, day] = startDate.split("-").map(Number);
   const [hours, minutes] = startTime.split(":").map(Number);
 
-  // Create start datetime
   const startDt = new Date(year, month - 1, day, hours, minutes);
   const endDt = new Date(startDt.getTime() + durationMinutes * 60 * 1000);
 
-  // Format to ICS datetime format (YYYYMMDDTHHMMSS)
   const formatICSDate = (date: Date) => {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -66,6 +61,16 @@ function generateICS(meeting: {
 
 export async function POST(request: NextRequest) {
   try {
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (!resendApiKey) {
+      return NextResponse.json(
+        { error: "RESEND_API_KEY is not configured" },
+        { status: 500 },
+      );
+    }
+
+    const resend = new Resend(resendApiKey);
+
     const body = await request.json();
     const {
       meetingId,
@@ -97,7 +102,6 @@ export async function POST(request: NextRequest) {
       durationMinutes: 60,
     });
 
-    // Convert ICS content to base64 for attachment
     const icsBase64 = Buffer.from(icsContent).toString("base64");
 
     const { data, error } = await resend.emails.send({

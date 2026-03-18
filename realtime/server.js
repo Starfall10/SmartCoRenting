@@ -52,14 +52,25 @@ if (!getApps().length) {
 const adminDb = firebaseInitialized ? getFirestore() : null;
 
 const app = express();
-app.use(cors());
+
+const corsOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: corsOrigins,
+    credentials: true,
+  }),
+);
 
 const server = http.createServer(app);
 
-// IMPORTANT: set CORS origin to your Next.js site
+// IMPORTANT: set CORS_ORIGINS to a comma-separated list of allowed frontend origins
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000"],
+    origin: corsOrigins,
     methods: ["GET", "POST"],
     credentials: true,
   },
