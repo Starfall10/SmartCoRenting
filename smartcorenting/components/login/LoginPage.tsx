@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
-import { FcGoogle } from "react-icons/fc";
 import { ViewType, UserData } from "@/types";
 import { signUpWithEmail, signInWithEmail } from "@/lib/firebase/auth";
 import { checkUserExists, createUser, getUserData } from "@/lib/firebase/user";
@@ -22,11 +21,6 @@ const LoginPage: React.FC<LoginPageProps> = ({
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const handleGoogleAuth = () => {
-    // Simulate authentication
-    setActiveView("home");
-  };
 
   const handleAuthSuccess = async (
     uid: string,
@@ -162,32 +156,6 @@ const LoginPage: React.FC<LoginPageProps> = ({
             {loading ? "Loading..." : isCreating ? "Sign Up" : "Login"}
           </button>
         </form>
-
-        <div className="w-full max-w-sm my-6 flex items-center gap-4">
-          <div
-            className={`flex-1 h-px ${isDarkMode ? "bg-zinc-700" : "bg-gray-300"}`}
-          />
-          <span
-            className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
-          >
-            OR
-          </span>
-          <div
-            className={`flex-1 h-px ${isDarkMode ? "bg-zinc-700" : "bg-gray-300"}`}
-          />
-        </div>
-
-        <button
-          onClick={handleGoogleAuth}
-          className={`flex items-center justify-center gap-3 w-full max-w-sm py-4 rounded-full font-medium transition-colors ${
-            isDarkMode
-              ? "bg-zinc-800 hover:bg-zinc-700 text-white"
-              : "bg-gray-100 hover:bg-gray-200 text-black border border-gray-300"
-          }`}
-        >
-          <FcGoogle size={24} />
-          Continue with Google
-        </button>
 
         <button
           onClick={() => {
