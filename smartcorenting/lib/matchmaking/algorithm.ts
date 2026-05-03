@@ -4,7 +4,6 @@ import {
   DEFAULT_HARD_CONSTRAINT_FILTERS,
 } from "@/types";
 
-// Current algorithm version - increment when logic changes
 export const ALGORITHM_VERSION = "1.0.0";
 
 // ============================================================================

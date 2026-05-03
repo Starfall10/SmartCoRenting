@@ -31,6 +31,7 @@ export async function createUser(
   uid: string,
   email: string,
   displayName?: string,
+  photoURL?: string,
 ): Promise<UserData> {
   const userRef = doc(db, "users", uid);
 
@@ -38,6 +39,7 @@ export async function createUser(
     uid,
     email,
     displayName: displayName || "",
+    photoURL,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     profileComplete: false,

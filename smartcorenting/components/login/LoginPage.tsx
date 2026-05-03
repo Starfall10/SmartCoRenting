@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
+import { FcGoogle } from "react-icons/fc";
+
 import { ViewType, UserData } from "@/types";
-import { signUpWithEmail, signInWithEmail } from "@/lib/firebase/auth";
+import {
+  signUpWithEmail,
+  signInWithEmail,
+  signInWithGoogle,
+} from "@/lib/firebase/auth";
 import { checkUserExists, createUser, getUserData } from "@/lib/firebase/user";
 
 interface LoginPageProps {
@@ -26,6 +32,7 @@ const LoginPage: React.FC<LoginPageProps> = ({
     uid: string,
     userEmail: string,
     name?: string,
+    photoURL?: string,
   ) => {
     try {
       // Create session cookie
@@ -51,7 +58,7 @@ const LoginPage: React.FC<LoginPageProps> = ({
         }
       } else {
         // New user - create entry and go to add profile
-        const newUser = await createUser(uid, userEmail, name);
+        const newUser = await createUser(uid, userEmail, name, photoURL);
         setCurrentUser(newUser);
         setActiveView("addprofile");
       }
@@ -81,6 +88,25 @@ const LoginPage: React.FC<LoginPageProps> = ({
       );
     } catch (err: any) {
       setError(err.message || "Authentication failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setLoading(true);
+
+    try {
+      const user = await signInWithGoogle();
+      await handleAuthSuccess(
+        user.uid,
+        user.email || "",
+        user.displayName || undefined,
+        user.photoURL || undefined,
+      );
+    } catch (err: any) {
+      setError(err.message || "Google sign-in failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -156,6 +182,34 @@ const LoginPage: React.FC<LoginPageProps> = ({
             {loading ? "Loading..." : isCreating ? "Sign Up" : "Login"}
           </button>
         </form>
+
+        <div className="my-8 w-full max-w-sm flex items-center gap-4">
+          <div
+            className={`h-px flex-1 ${isDarkMode ? "bg-zinc-700" : "bg-gray-300"}`}
+          />
+          <span
+            className={`text-xs uppercase tracking-[0.3em] ${isDarkMode ? "text-gray-500" : "text-gray-500"}`}
+          >
+            OR
+          </span>
+          <div
+            className={`h-px flex-1 ${isDarkMode ? "bg-zinc-700" : "bg-gray-300"}`}
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={loading}
+          className={`w-full max-w-sm py-4 rounded-full font-medium transition-colors border flex items-center justify-center gap-3 ${
+            isDarkMode
+              ? "border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800 disabled:bg-zinc-950 disabled:text-gray-500"
+              : "border-gray-300 bg-white text-black hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
+          }`}
+        >
+          <FcGoogle className="h-5 w-5" aria-hidden="true" />
+          Continue with Google
+        </button>
 
         <button
           onClick={() => {

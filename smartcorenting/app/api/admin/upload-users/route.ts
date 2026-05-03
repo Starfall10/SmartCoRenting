@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
 
     for (let i = 0; i < csvUsers.length; i++) {
       const csvUser = csvUsers[i];
-      const rowNum = i + 2; // +2 because row 1 is header, and arrays are 0-indexed
+      const rowNum = i + 2;
 
       // Validate required fields
       if (!csvUser.email) {

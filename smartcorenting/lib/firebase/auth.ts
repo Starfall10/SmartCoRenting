@@ -1,5 +1,7 @@
 import {
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
   signInWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
@@ -13,7 +15,7 @@ export async function signUpWithEmail(
   password: string,
   displayName?: string,
 ) {
-  const cred = await createUserWithEmailAndPassword(auth, email, password); // :contentReference[oaicite:1]{index=1}
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
   if (displayName) {
     await updateProfile(cred.user, { displayName });
   }
@@ -22,7 +24,14 @@ export async function signUpWithEmail(
 
 // Sign in
 export async function signInWithEmail(email: string, password: string) {
-  const cred = await signInWithEmailAndPassword(auth, email, password); // :contentReference[oaicite:2]{index=2}
+  const cred = await signInWithEmailAndPassword(auth, email, password);
+  return cred.user;
+}
+
+// Sign in with Google
+export async function signInWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  const cred = await signInWithPopup(auth, provider);
   return cred.user;
 }
 
