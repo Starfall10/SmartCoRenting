@@ -152,6 +152,17 @@ async function saveMessage(conversationId, message) {
 
 io.on("connection", (socket) => {
   console.log("connected:", socket.id);
+  try {
+    console.log("socket handshake info:", {
+      address: socket.handshake.address,
+      headers:
+        socket.handshake.headers && Object.keys(socket.handshake.headers),
+      auth: socket.handshake.auth,
+      time: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.warn("Failed to log socket handshake info", e);
+  }
 
   // Join a room (e.g. conversationId)
   socket.on("chat:join", ({ roomId }) => {
@@ -167,6 +178,21 @@ io.on("connection", (socket) => {
 
   // Send a message to everyone in the room
   socket.on("chat:message", async ({ roomId, message }) => {
+    console.log(
+      "received chat:message from",
+      socket.id,
+      "roomId:",
+      roomId,
+      "message:",
+      {
+        senderId: message?.senderId,
+        type: message?.type,
+        textPreview:
+          typeof message?.text === "string"
+            ? message.text.slice(0, 120)
+            : undefined,
+      },
+    );
     // message object example:
     // { text, senderId, type?, location?, meetingId?, meeting? }
 
@@ -201,9 +227,15 @@ io.on("connection", (socket) => {
       io.to(roomId).emit("chat:message", { roomId, message: fullMessage });
     } catch (error) {
       // If persistence fails, still try to broadcast but log the error
-      console.error("Failed to persist message:", error);
+      console.error("Failed to persist message:", error, {
+        stack: error?.stack,
+      });
       socket.emit("chat:error", { error: "Failed to save message" });
     }
+  });
+
+  socket.on("error", (err) => {
+    console.error("Socket error on", socket.id, err);
   });
 
   socket.on("disconnect", () => {

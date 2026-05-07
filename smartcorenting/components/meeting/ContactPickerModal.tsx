@@ -72,6 +72,11 @@ const ContactPickerModal: React.FC<ContactPickerModalProps> = ({
       const socket = getSocket();
 
       // Emit the location message via Socket.IO
+      console.log("[share-location] emitting chat:message", {
+        to: contact.conversationId,
+        senderId: currentUser.uid,
+        locationName: location.name,
+      });
       socket.emit("chat:message", {
         roomId: contact.conversationId,
         message: {

@@ -146,18 +146,27 @@ const ScheduleMeetingModal: React.FC<ScheduleMeetingModalProps> = ({
 
       // Send meeting invite via Socket.IO
       const socket = getSocket();
-      socket.emit("chat:message", {
-        roomId: conversationId,
-        message: {
-          senderId: currentUser.uid,
-          text: isReschedule
-            ? `📅 Rescheduled meeting at ${location.name || "Selected Location"}`
-            : `📅 Meeting invite at ${location.name || "Selected Location"}`,
-          type: "meeting_invite",
+      try {
+        console.log("[meeting] emitting chat:message", {
+          roomId: conversationId,
           meetingId: meeting.id,
-          meeting: meeting,
-        },
-      });
+          senderId: currentUser.uid,
+        });
+        socket.emit("chat:message", {
+          roomId: conversationId,
+          message: {
+            senderId: currentUser.uid,
+            text: isReschedule
+              ? `📅 Rescheduled meeting at ${location.name || "Selected Location"}`
+              : `📅 Meeting invite at ${location.name || "Selected Location"}`,
+            type: "meeting_invite",
+            meetingId: meeting.id,
+            meeting: meeting,
+          },
+        });
+      } catch (err) {
+        console.error("[meeting] failed to emit chat:message", err);
+      }
 
       // Reset and close
       setSelectedDate("");

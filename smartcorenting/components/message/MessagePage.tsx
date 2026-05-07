@@ -77,7 +77,15 @@ const MessagePage: React.FC<MessagePageProps> = ({
     const socket = socketRef.current;
 
     // Join the socket room
-    socket.emit("chat:join", { roomId: activeConversationId });
+    try {
+      console.log("[message] emitting chat:join", {
+        socketId: socket.id,
+        roomId: activeConversationId,
+      });
+      socket.emit("chat:join", { roomId: activeConversationId });
+    } catch (err) {
+      console.error("[message] failed to emit chat:join", err);
+    }
 
     // Subscribe to Firestore for message history
     const unsubscribe = subscribeToMessages(
@@ -96,6 +104,12 @@ const MessagePage: React.FC<MessagePageProps> = ({
       roomId: string;
       message: Message;
     }) => {
+      console.log("[message] received chat:message event", {
+        roomId,
+        messagePreview: message?.text?.slice?.(0, 120),
+        messageId: message?.id,
+      });
+
       if (roomId === activeConversationId && message) {
         setMessages((prev) => {
           // Avoid duplicates
@@ -119,7 +133,7 @@ const MessagePage: React.FC<MessagePageProps> = ({
 
     // Listen for errors
     const handleError = ({ error }: { error: string }) => {
-      console.error("Socket error:", error);
+      console.error("[message] Socket error:", error);
     };
 
     socket.on("chat:message", handleNewMessage);
@@ -139,13 +153,23 @@ const MessagePage: React.FC<MessagePageProps> = ({
     const socket = socketRef.current;
 
     // Emit message via Socket.IO
-    socket.emit("chat:message", {
-      roomId: activeConversationId,
-      message: {
+    try {
+      console.log("[message] emitting chat:message", {
+        roomId: activeConversationId,
         senderId: currentUser.uid,
-        text: messageText.trim(),
-      },
-    });
+        textPreview: messageText.trim().slice(0, 120),
+        socketConnected: socket.connected,
+      });
+      socket.emit("chat:message", {
+        roomId: activeConversationId,
+        message: {
+          senderId: currentUser.uid,
+          text: messageText.trim(),
+        },
+      });
+    } catch (err) {
+      console.error("[message] failed to emit chat:message", err);
+    }
 
     setMessageText("");
   };
